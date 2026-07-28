@@ -36,18 +36,47 @@ interface QuoteAssignment {
   paidAt?: string
   amountPaid?: number
   paymentType?: string
+  appointmentDate?: string
+  appointmentTime?: string
+  jobStartedAt?: string
+  jobFinishedAt?: string
+  jobDurationMins?: number
+  jobPhotos?: string[]
+  staffUserId?: string
+  staffName?: string
+  jobStatus?: 'ASSIGNED' | 'IN_PROGRESS' | 'ON_BREAK' | 'COMPLETED' | 'CANCELLED'
+  staffNotes?: string
+  cancelledAt?: string
 }
 
+interface StaffEmployee { id: string; name: string; email: string; position?: string | null }
+
 const TIERS = ['Essential', 'Signature', 'Prestige']
-const EMPTY_FORM = { refCode: '', tier: 'Essential', price: '', note: '', clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' }
+const EMPTY_FORM = { refCode: '', tier: 'Essential', price: '', note: '', clientName: '', clientEmail: '', clientPhone: '', clientAddress: '', staffUserId: '', staffName: '' }
+
+const STATUS_LABELS: Record<string, string> = {
+  ASSIGNED: 'Assigned',
+  IN_PROGRESS: 'In Progress',
+  ON_BREAK: 'On Break',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+}
+const STATUS_COLORS: Record<string, string> = {
+  ASSIGNED: '#4a90d9',
+  IN_PROGRESS: '#27ae60',
+  ON_BREAK: '#f39c12',
+  COMPLETED: '#8e44ad',
+  CANCELLED: '#e74c3c',
+}
 
 export default function AdminPanel() {
-  const [authed, setAuthed]       = useState(false)
-  const [pw, setPw]               = useState('')
-  const [pwErr, setPwErr]         = useState('')
-  const [quotes, setQuotes]       = useState<QuoteAssignment[]>([])
-  const [requests, setRequests]   = useState<QuoteRequest[]>([])
-  const [form, setForm]           = useState(EMPTY_FORM)
+  const [authed, setAuthed]           = useState(false)
+  const [pw, setPw]                   = useState('')
+  const [pwErr, setPwErr]             = useState('')
+  const [quotes, setQuotes]           = useState<QuoteAssignment[]>([])
+  const [requests, setRequests]       = useState<QuoteRequest[]>([])
+  const [staffEmployees, setStaffEmployees] = useState<StaffEmployee[]>([])
+  const [form, setForm]               = useState(EMPTY_FORM)
   const [pendingClient, setPendingClient] = useState<QuoteRequest | null>(null)
   const [editing, setEditing]     = useState<string | null>(null)
   const [flash, setFlash]         = useState('')
@@ -61,10 +90,20 @@ export default function AdminPanel() {
     Promise.all([
       fetch('/api/quote-requests').then(r => r.json()).catch(() => []),
       fetch('/api/quote-assignments').then(r => r.json()).catch(() => []),
-    ]).then(([reqs, assigns]) => {
+      fetch('/api/admin/staff-employees').then(r => r.json()).catch(() => []),
+    ]).then(([reqs, assigns, emps]) => {
       setRequests(Array.isArray(reqs) ? reqs : [])
       setQuotes(Array.isArray(assigns) ? assigns : [])
+      setStaffEmployees(Array.isArray(emps) ? emps : [])
     })
+
+    // Poll for job status updates every 30s
+    const interval = setInterval(() => {
+      fetch('/api/quote-assignments').then(r => r.json()).then(a => {
+        if (Array.isArray(a)) setQuotes(a)
+      }).catch(() => {})
+    }, 30_000)
+    return () => clearInterval(interval)
   }, [authed])
 
   const fetchRefClient = async (ref: string) => {
@@ -105,6 +144,8 @@ export default function AdminPanel() {
       } catch {}
     }
     const prev = quotes.find(q => q.refCode === (editing ?? ref))
+    const staffUserId  = form.staffUserId  || prev?.staffUserId
+    const staffName    = form.staffName    || prev?.staffName
     const entry: QuoteAssignment = {
       refCode: ref,
       tier: form.tier,
@@ -120,6 +161,11 @@ export default function AdminPanel() {
       clientStoreys:    src?.storeys     ?? prev?.clientStoreys,
       clientInspection: src ? `${src.inspectionDate} · ${src.inspectionTime}` : prev?.clientInspection,
       clientArea:       src?.serviceArea ?? prev?.clientArea,
+      // Staff App sync
+      staffUserId:      staffUserId || undefined,
+      staffName:        staffName   || undefined,
+      jobStatus:        staffUserId ? (prev?.jobStatus ?? 'ASSIGNED') : prev?.jobStatus,
+      staffNotes:       prev?.staffNotes,
     }
     try {
       const saveRes = await fetch('/api/quote-assignments', {
@@ -160,6 +206,7 @@ export default function AdminPanel() {
       refCode: q.refCode, tier: q.tier, price: String(q.price), note: q.note,
       clientName: q.clientName ?? '', clientEmail: q.clientEmail ?? '',
       clientPhone: q.clientPhone ?? '', clientAddress: q.clientAddress ?? '',
+      staffUserId: q.staffUserId ?? '', staffName: q.staffName ?? '',
     })
     setEditing(q.refCode)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -189,6 +236,7 @@ export default function AdminPanel() {
       refCode: r.refCode, tier: 'Essential', price: '', note: '',
       clientName: r.name, clientEmail: r.email,
       clientPhone: r.phone, clientAddress: r.address,
+      staffUserId: '', staffName: '',
     })
     setPendingClient(r)
     setEditing(null)
@@ -345,6 +393,21 @@ export default function AdminPanel() {
                 onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
               />
             </div>
+            <div className={styles.field}>
+              <label>Assign to Staff Member</label>
+              <select
+                value={form.staffUserId}
+                onChange={e => {
+                  const emp = staffEmployees.find(s => s.id === e.target.value)
+                  setForm(f => ({ ...f, staffUserId: e.target.value, staffName: emp?.name ?? '' }))
+                }}
+              >
+                <option value="">— Unassigned —</option>
+                {staffEmployees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}{emp.position ? ` (${emp.position})` : ''}</option>
+                ))}
+              </select>
+            </div>
             <hr className={styles.formDivider} />
             <div className={styles.field}>
               <label>Client Name</label>
@@ -403,7 +466,8 @@ export default function AdminPanel() {
                     <th>Tier</th>
                     <th>Price</th>
                     <th>Client Details</th>
-                    <th>Assigned</th>
+                    <th>Staff / Status</th>
+                    <th>Dates</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -432,7 +496,33 @@ export default function AdminPanel() {
                         {q.note           && <div className={styles.clientNote}>{q.note}</div>}
                         {!q.clientEmail && !q.clientPhone && !q.clientAddress && !q.note && '—'}
                       </td>
-                      <td>{new Date(q.assignedAt).toLocaleDateString('en-AU')}</td>
+                      <td className={styles.noteCell}>
+                        {q.staffName && <div className={styles.clientDetail} style={{ fontWeight: 600 }}>{q.staffName}</div>}
+                        {q.jobStatus && (
+                          <div style={{
+                            display: 'inline-block', marginTop: 4, padding: '2px 8px',
+                            borderRadius: 4, fontSize: 11, fontWeight: 700,
+                            color: '#fff', background: STATUS_COLORS[q.jobStatus] ?? '#888',
+                          }}>
+                            {STATUS_LABELS[q.jobStatus] ?? q.jobStatus}
+                          </div>
+                        )}
+                        {q.jobStartedAt && (
+                          <div className={styles.clientDetail} style={{ marginTop: 4 }}>
+                            In: {new Date(q.jobStartedAt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                            {q.jobFinishedAt && ` → Out: ${new Date(q.jobFinishedAt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}`}
+                          </div>
+                        )}
+                        {q.jobDurationMins != null && (
+                          <div className={styles.clientDetail}>{Math.floor(q.jobDurationMins / 60)}h {q.jobDurationMins % 60}m</div>
+                        )}
+                        {q.staffNotes && <div className={styles.clientNote} style={{ marginTop: 4 }}>{q.staffNotes}</div>}
+                        {!q.staffName && !q.jobStatus && '—'}
+                      </td>
+                      <td>
+                        <div>{new Date(q.assignedAt).toLocaleDateString('en-AU')}</div>
+                        {q.appointmentDate && <div className={styles.clientDetail}>{q.appointmentDate}{q.appointmentTime ? ` · ${q.appointmentTime}` : ''}</div>}
+                      </td>
                       <td className={styles.actions}>
                         <button className={styles.editBtn} onClick={() => { setConfirmDelete(null); handleEdit(q) }}>Edit</button>
                         <button

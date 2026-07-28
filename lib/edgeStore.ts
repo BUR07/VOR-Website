@@ -114,6 +114,48 @@ export interface QuoteAssignment {
   reBookIn?: number
   reBookReminderSentAt?: string
   commsSkippedAt?: string
+  // Staff App sync fields
+  staffUserId?: string
+  staffName?: string
+  jobStatus?: 'ASSIGNED' | 'IN_PROGRESS' | 'ON_BREAK' | 'COMPLETED' | 'CANCELLED'
+  staffNotes?: string
+  staffChecklist?: string
+  staffBreakMins?: number
+  updatedAt?: string
+}
+
+// ── Staff Employee registry ────────────────────────────────
+
+export interface StaffEmployee {
+  id: string
+  name: string
+  email: string
+  position?: string | null
+  phone?: string | null
+  employeeCode?: string | null
+}
+
+export async function getStaffEmployees(): Promise<StaffEmployee[]> {
+  return (await ecGet<StaffEmployee[]>('_staff_employees')) ?? []
+}
+
+export async function saveStaffEmployees(employees: StaffEmployee[]) {
+  await ecPatch([{ operation: 'upsert', key: '_staff_employees', value: employees }])
+}
+
+// ── Patch a single assignment (partial update) ─────────────
+
+export async function patchAssignment(refCode: string, patch: Partial<QuoteAssignment>) {
+  const existing = await getAssignment(refCode)
+  if (!existing) throw new Error(`Assignment ${refCode} not found`)
+  const updated: QuoteAssignment = { ...existing, ...patch, updatedAt: new Date().toISOString() }
+  await ecPatch([{ operation: 'upsert', key: `assign_${refCode}`, value: updated }])
+  return updated
+}
+
+export async function listAssignmentsByStaff(staffUserId: string): Promise<QuoteAssignment[]> {
+  const all = await listAssignments()
+  return all.filter(a => a.staffUserId === staffUserId && !a.cancelledAt)
 }
 
 export async function saveAssignment(a: QuoteAssignment) {
