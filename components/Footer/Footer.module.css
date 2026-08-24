@@ -29,6 +29,10 @@
   text-decoration:none;transition:color 0.2s;letter-spacing:0.04em;
 }
 .contactLinks a:hover{color:var(--blue-baby)}
+.region{
+  font-size:0.56rem;letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--gold,#c9a84c);margin-right:0.4rem;font-weight:600;
+}
 
 .col h4{
   font-size:0.57rem;font-weight:400;letter-spacing:0.24em;

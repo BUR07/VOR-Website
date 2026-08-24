@@ -5,6 +5,7 @@
   opacity:0;transform:translateY(12px);
   pointer-events:none;
   transition:opacity 0.4s,transform 0.4s;
+  display:flex;flex-direction:column;gap:0.5rem;
 }
 .show{opacity:1;transform:translateY(0);pointer-events:all}
 
@@ -24,6 +25,11 @@
 .call span{
   font-size:0.72rem;font-weight:400;letter-spacing:0.12em;
   white-space:nowrap;
+}
+.call span em{
+  display:block;font-style:normal;
+  font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--blue-baby);margin-bottom:0.1rem;
 }
 
 @media(max-width:900px){

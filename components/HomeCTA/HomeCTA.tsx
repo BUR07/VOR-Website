@@ -14,7 +14,14 @@ export default function HomeCTA() {
         </p>
         <div className={styles.actions}>
           <Link href="/book" className={styles.btnPrimary}>Book Your Free Consultation</Link>
-          <a href="tel:+61416572468" className={styles.btnGhost}>Call Noah — 0416 572 468</a>
+          <div className={styles.callRow}>
+            <a href="tel:+61466541805" className={styles.btnGhost}>
+              <span className={styles.callRegion}>Sydney</span>Zach — 0466 541 805
+            </a>
+            <a href="tel:+61416572468" className={styles.btnGhost}>
+              <span className={styles.callRegion}>ACT</span>Noah — 0416 572 468
+            </a>
+          </div>
         </div>
         <div className={styles.trust}>
           <span>★★★★★ 5.0 Google Rating</span>

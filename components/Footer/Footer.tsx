@@ -10,9 +10,9 @@ export default function Footer() {
           <div className={styles.tagline}>We don't just clean windows — we reveal clarity</div>
           <p>Born on the Northern Beaches of Sydney. Built to scale from Australia to the world. Elevating living, one pane at a time.</p>
           <div className={styles.contactLinks}>
-            <a href="tel:+61416572468">Noah Rylands — 0416 572 468</a>
+            <a href="tel:+61466541805"><span className={styles.region}>Sydney</span> Zach O&apos;Sullivan — 0466 541 805</a>
+            <a href="tel:+61416572468"><span className={styles.region}>ACT</span> Noah Rylands — 0416 572 468</a>
             <a href="mailto:info@vorwindowco.com">info@vorwindowco.com</a>
-            <span>All of Sydney &amp; ACT</span>
           </div>
         </div>
 
@@ -41,7 +41,7 @@ export default function Footer() {
       </footer>
 
       <div className={styles.bottom}>
-        <p>© 2025 VØR Window Co. All rights reserved. Noah Rylands — Sydney &amp; ACT. ABN 77 587 134 249</p>
+        <p>© 2025 VØR Window Co. All rights reserved. Sydney: Zach O&apos;Sullivan · ACT: Noah Rylands. ABN 77 587 134 249</p>
         <div className={styles.vorSign}>VØR</div>
         <Link href="/admin" style={{ fontSize: '0.55rem', letterSpacing: '0.14em', color: 'rgba(250,246,238,0.12)', textDecoration: 'none', textTransform: 'uppercase' }}>admin</Link>
       </div>

@@ -57,6 +57,14 @@
 }
 .btnGhost:hover{border-color:rgba(250,246,238,0.7);background:rgba(250,246,238,0.06)}
 
+.callRow{
+  display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;
+}
+.callRegion{
+  display:block;font-size:0.48rem;letter-spacing:0.22em;
+  color:var(--blue-baby);margin-bottom:0.2rem;
+}
+
 .trust{
   display:flex;align-items:center;justify-content:center;
   gap:0.8rem;flex-wrap:wrap;
